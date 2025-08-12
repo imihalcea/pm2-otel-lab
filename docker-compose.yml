@@ -1,0 +1,62 @@
+services:
+  app:
+    build: .
+    container_name: demo-node
+    depends_on:
+      - otel-collector
+    ports:
+      - "3000:3000"
+    volumes:
+      - app-logs:/var/log/app
+      - pm2-logs:/root/.pm2/logs
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.103.0
+    container_name: otel-collector
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - otelcol-storage:/var/lib/otelcol/file_storage
+      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+      - app-logs:/var/log/app:ro
+      - pm2-logs:/pm2-logs:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    user: "0:0"
+    depends_on:
+      - loki
+      - jaeger
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.56
+    container_name: jaeger
+    environment:
+      - COLLECTOR_ZIPKIN_HTTP_PORT=9411
+    ports:
+      - "6831:6831/udp"
+      - "16686:16686"
+      - "14268:14268"
+      
+  loki:
+    image: grafana/loki:2.9.8
+    container_name: loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+
+  grafana:
+    image: grafana/grafana:10.4.3
+    container_name: grafana
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana-provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - loki
+
+volumes:
+  app-logs:
+  pm2-logs:
+  grafana-data:
+  otelcol-storage:

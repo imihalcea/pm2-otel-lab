@@ -1,0 +1,79 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+      grpc:
+
+  filelog/app:
+    include: [/var/log/app/*.log]
+    start_at: beginning
+    storage: file_storage
+    operators:
+      - type: regex_parser
+        regex: '^(?P<log>.*)$'
+        parse_from: body
+    attributes:
+      - key: app
+        value: pm2-otel-demo
+        action: upsert
+      - key: job
+        value: app-logs
+        action: upsert
+      - key: service.name
+        value: demo-node
+        action: upsert
+
+  filelog/pm2:
+    include: [/pm2-logs/*.log]
+    start_at: beginning
+    storage: file_storage
+    operators:
+      - type: regex_parser
+        regex: '^(?P<log>.*)$'
+        parse_from: body
+    attributes:
+      - key: app
+        value: pm2-otel-demo
+        action: upsert
+      - key: job
+        value: pm2-logs
+        action: upsert
+      - key: service.name
+        value: pm2
+        action: upsert
+
+processors:
+  batch:
+
+exporters:
+  logging:
+    loglevel: info
+
+  otlp:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+    
+
+extensions:
+  file_storage:
+    directory: /var/lib/otelcol/file_storage
+
+service:
+  extensions: [file_storage]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp, logging]
+    logs/app:
+      receivers: [filelog/app]
+      processors: [batch]
+      exporters: [loki, logging]
+    logs/pm2:
+      receivers: [filelog/pm2]
+      processors: [batch]
+      exporters: [loki, logging]
