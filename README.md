@@ -19,7 +19,7 @@ L'approche adoptée ici permet d'injecter l'instrumentation OpenTelemetry au dé
 
 ### Architecture Générale
 
-1.  **Application Node.js (`app/index.js`) :** C'est l'application métier. Elle est volontairement simple et ne contient aucune ligne de code liée à OpenTelemetry (à l'exception d'une utilisation optionnelle de l'API `trace` pour des spans personnalisés, mais l'auto-instrumentation fonctionnerait sans cela).
+1.  **Application Node.js (`app/index.js`) :** C'est l'application métier. Elle est volontairement simple et ne contient aucune ligne de code liée à OpenTelemetry.
 2.  **PM2 (`ecosystem.config.cjs`) :** PM2 est utilisé pour gérer le processus Node.js en mode cluster. C'est lui qui va "amorcer" OpenTelemetry.
 3.  **Script de Bootstrap OpenTelemetry (`otel/tracing.cjs`) :** Ce fichier contient toute la logique d'initialisation du SDK OpenTelemetry, des auto-instrumentations et de la configuration de l'exportateur de traces. Il est délibérément placé en dehors du répertoire de l'application (`app/`) pour renforcer la séparation.
 4.  **OpenTelemetry Collector (`otel-collector-config.yaml`) :** Le collecteur reçoit les traces de l'application via OTLP/HTTP et les logs via la lecture de fichiers (`filelog`). Il exporte ensuite les traces vers Jaeger et les logs vers Loki.
